@@ -1,20 +1,38 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 function App() {
-	const [tasks, setTasks] = useState([]);
+	// Load tasks from localStorage on first render (or empty array)
+	const [tasks, setTasks] = useState(() => {
+		const saved = localStorage.getItem("taskflow-tasks");
+		if (saved) {
+			try {
+				return JSON.parse(saved);
+			} catch (e) {
+				console.error("Failed to parse saved tasks:", e);
+				return [];
+			}
+		}
+		return [];
+	});
+
 	const [taskTitle, setTaskTitle] = useState("");
+
+	// Save tasks to localStorage every time tasks change
+	useEffect(() => {
+		localStorage.setItem("taskflow-tasks", JSON.stringify(tasks));
+	}, [tasks]);
 
 	const handleAddTask = (e) => {
 		e.preventDefault();
 		if (!taskTitle.trim()) return;
 
 		const newTask = {
-			id: Date.now(), // simple unique id
+			id: Date.now(),
 			title: taskTitle.trim(),
 			completed: false,
 		};
 
-		setTasks([newTask, ...tasks]); // add to top of list
+		setTasks([newTask, ...tasks]);
 		setTaskTitle("");
 	};
 
@@ -39,7 +57,7 @@ function App() {
 					TaskFlow
 				</h1>
 				<p className='text-center text-gray-500 dark:text-gray-400 mb-10 text-lg'>
-					Your tasks. Organized. Simple.
+					Your tasks. Organized. Persistent.
 				</p>
 
 				{/* Add Task Form */}
