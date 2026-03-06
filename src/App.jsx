@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 
 function App() {
-	// Load tasks from localStorage on first render (or empty array)
 	const [tasks, setTasks] = useState(() => {
 		const saved = localStorage.getItem("taskflow-tasks");
 		if (saved) {
@@ -16,8 +15,8 @@ function App() {
 	});
 
 	const [taskTitle, setTaskTitle] = useState("");
+	const [sortOldestFirst, setSortOldestFirst] = useState(false);
 
-	// Save tasks to localStorage every time tasks change
 	useEffect(() => {
 		localStorage.setItem("taskflow-tasks", JSON.stringify(tasks));
 	}, [tasks]);
@@ -30,6 +29,7 @@ function App() {
 			id: Date.now(),
 			title: taskTitle.trim(),
 			completed: false,
+			createdAt: Date.now(),
 		};
 
 		setTasks([newTask, ...tasks]);
@@ -49,16 +49,58 @@ function App() {
 		setTasks(tasks.filter((task) => task.id !== id));
 	};
 
+	const clearCompleted = () => {
+		if (!window.confirm("Clear all completed tasks?")) return;
+		setTasks(tasks.filter((task) => !task.completed));
+	};
+
+	// Sort: newest first (default) or oldest first
+	const sortedTasks = [...tasks].sort((a, b) => {
+		return sortOldestFirst
+			? a.createdAt - b.createdAt
+			: b.createdAt - a.createdAt;
+	});
+
+	const totalTasks = tasks.length;
+	const completedCount = tasks.filter((t) => t.completed).length;
+
 	return (
 		<div className='min-h-screen bg-gray-100 dark:bg-gray-900 py-8 px-4 sm:px-6 lg:px-8'>
 			<div className='max-w-3xl mx-auto'>
-				{/* Header */}
 				<h1 className='text-4xl sm:text-5xl font-bold text-center mb-2 text-gray-800 dark:text-white'>
 					TaskFlow
 				</h1>
-				<p className='text-center text-gray-500 dark:text-gray-400 mb-10 text-lg'>
+				<p className='text-center text-gray-500 dark:text-gray-400 mb-8 text-lg'>
 					Your tasks. Organized. Persistent.
 				</p>
+
+				{/* Stats & Controls */}
+				<div className='flex flex-col sm:flex-row justify-between items-center mb-6 gap-4'>
+					<div className='text-gray-700 dark:text-gray-300'>
+						{totalTasks} task{totalTasks !== 1 ? "s" : ""}
+						{completedCount > 0 && ` • ${completedCount} completed`}
+					</div>
+
+					<div className='flex gap-3'>
+						<button
+							onClick={() => setSortOldestFirst(!sortOldestFirst)}
+							className='px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 
+                         dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg 
+                         transition-colors'>
+							{sortOldestFirst ? "Newest first" : "Oldest first"}
+						</button>
+
+						{completedCount > 0 && (
+							<button
+								onClick={clearCompleted}
+								className='px-4 py-2 text-sm bg-red-100 hover:bg-red-200 
+                           dark:bg-red-900/40 dark:hover:bg-red-800/60 
+                           text-red-700 dark:text-red-300 rounded-lg transition-colors'>
+								Clear completed
+							</button>
+						)}
+					</div>
+				</div>
 
 				{/* Add Task Form */}
 				<form
@@ -88,18 +130,21 @@ function App() {
 
 				{/* Task List */}
 				<div className='space-y-3'>
-					{tasks.length === 0 ? (
-						<div className='bg-white dark:bg-gray-800 rounded-xl shadow p-8 text-center'>
-							<p className='text-gray-500 dark:text-gray-400 text-lg'>
-								No tasks yet — add one above!
+					{sortedTasks.length === 0 ? (
+						<div className='bg-white dark:bg-gray-800 rounded-xl shadow p-10 text-center'>
+							<p className='text-gray-500 dark:text-gray-400 text-xl font-medium'>
+								No tasks yet
+							</p>
+							<p className='text-gray-400 dark:text-gray-500 mt-2'>
+								Add your first task above to get started!
 							</p>
 						</div>
 					) : (
-						tasks.map((task) => (
+						sortedTasks.map((task) => (
 							<div
 								key={task.id}
 								className={`bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex items-center gap-4 transition-all
-                  ${task.completed ? "opacity-75" : ""}`}>
+                  ${task.completed ? "opacity-70" : ""}`}>
 								<input
 									type='checkbox'
 									checked={task.completed}
