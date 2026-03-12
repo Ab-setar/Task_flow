@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 
 function App() {
-	// === Dark Mode (persists) ===
+	// Dark Mode
 	const [isDark, setIsDark] = useState(() => {
 		const saved = localStorage.getItem("taskflow-dark");
 		return saved ? JSON.parse(saved) : false;
 	});
 
-	// === Tasks ===
+	// Tasks
 	const [tasks, setTasks] = useState(() => {
 		const saved = localStorage.getItem("taskflow-tasks");
 		return saved ? JSON.parse(saved) : [];
@@ -17,16 +17,18 @@ function App() {
 	const [editingId, setEditingId] = useState(null);
 	const [editValue, setEditValue] = useState("");
 	const [sortOldestFirst, setSortOldestFirst] = useState(false);
+
+	// New: Search & Filter
+	const [searchTerm, setSearchTerm] = useState("");
+	const [filter, setFilter] = useState("all"); // 'all' | 'active' | 'completed'
+
 	const inputRef = useRef(null);
 
 	// Dark mode effect
 	useEffect(() => {
 		localStorage.setItem("taskflow-dark", JSON.stringify(isDark));
-		if (isDark) {
-			document.documentElement.classList.add("dark");
-		} else {
-			document.documentElement.classList.remove("dark");
-		}
+		if (isDark) document.documentElement.classList.add("dark");
+		else document.documentElement.classList.remove("dark");
 	}, [isDark]);
 
 	// Save tasks
@@ -34,7 +36,6 @@ function App() {
 		localStorage.setItem("taskflow-tasks", JSON.stringify(tasks));
 	}, [tasks]);
 
-	// Auto focus input
 	useEffect(() => {
 		inputRef.current?.focus();
 	}, []);
@@ -90,9 +91,19 @@ function App() {
 		setTasks(tasks.filter((t) => !t.completed));
 	};
 
-	const sortedTasks = [...tasks].sort((a, b) =>
-		sortOldestFirst ? a.createdAt - b.createdAt : b.createdAt - a.createdAt,
-	);
+	// === Filtering & Sorting Logic ===
+	const filteredTasks = tasks
+		.filter((task) => {
+			const matchesSearch = task.title
+				.toLowerCase()
+				.includes(searchTerm.toLowerCase());
+			if (filter === "active") return matchesSearch && !task.completed;
+			if (filter === "completed") return matchesSearch && task.completed;
+			return matchesSearch; // 'all'
+		})
+		.sort((a, b) =>
+			sortOldestFirst ? a.createdAt - b.createdAt : b.createdAt - a.createdAt,
+		);
 
 	const total = tasks.length;
 	const completedCount = tasks.filter((t) => t.completed).length;
@@ -113,33 +124,48 @@ function App() {
 					</div>
 					<button
 						onClick={toggleDarkMode}
-						className='w-12 h-12 flex items-center justify-center text-3xl bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:scale-110 active:scale-95 transition-all'>
+						className='w-12 h-12 flex items-center justify-center text-3xl bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:scale-110 transition-all'>
 						{isDark ? "☀️" : "🌙"}
 					</button>
 				</div>
 
-				{/* Stats & Controls */}
-				<div className='flex flex-col sm:flex-row justify-between items-center mb-6 gap-4'>
-					<div className='text-lg font-medium text-gray-700 dark:text-gray-300'>
+				{/* Search + Filter Buttons */}
+				<div className='mb-6 flex flex-col sm:flex-row gap-4'>
+					<input
+						type='text'
+						placeholder='Search tasks...'
+						value={searchTerm}
+						onChange={(e) => setSearchTerm(e.target.value)}
+						className='flex-1 px-5 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none'
+					/>
+
+					<div className='flex bg-white dark:bg-gray-800 rounded-2xl shadow p-1'>
+						{["all", "active", "completed"].map((f) => (
+							<button
+								key={f}
+								onClick={() => setFilter(f)}
+								className={`flex-1 px-6 py-2 text-sm font-medium rounded-xl transition-all ${
+									filter === f
+										? "bg-blue-600 text-white shadow"
+										: "hover:bg-gray-100 dark:hover:bg-gray-700"
+								}`}>
+								{f === "all" ? "All" : f === "active" ? "Active" : "Completed"}
+							</button>
+						))}
+					</div>
+				</div>
+
+				{/* Stats */}
+				<div className='flex justify-between items-center mb-6 text-gray-700 dark:text-gray-300'>
+					<div className='text-lg font-medium'>
 						{total} task{total !== 1 ? "s" : ""}
 						{completedCount > 0 && ` • ${completedCount} completed`}
 					</div>
-
-					<div className='flex gap-3'>
-						<button
-							onClick={() => setSortOldestFirst(!sortOldestFirst)}
-							className='px-5 py-2 text-sm bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl shadow transition'>
-							{sortOldestFirst ? "Newest first" : "Oldest first"}
-						</button>
-
-						{completedCount > 0 && (
-							<button
-								onClick={clearCompleted}
-								className='px-5 py-2 text-sm bg-red-100 hover:bg-red-200 dark:bg-red-900/40 dark:hover:bg-red-800 text-red-700 dark:text-red-300 rounded-xl transition'>
-								Clear completed
-							</button>
-						)}
-					</div>
+					<button
+						onClick={() => setSortOldestFirst(!sortOldestFirst)}
+						className='px-5 py-2 text-sm bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition'>
+						{sortOldestFirst ? "Newest first" : "Oldest first"}
+					</button>
 				</div>
 
 				{/* Add Task Form */}
@@ -166,16 +192,18 @@ function App() {
 
 				{/* Task List */}
 				<div className='space-y-3'>
-					{sortedTasks.length === 0 ? (
+					{filteredTasks.length === 0 ? (
 						<div className='bg-white dark:bg-gray-800 rounded-2xl shadow p-12 text-center'>
-							<p className='text-6xl mb-4'>📭</p>
+							<p className='text-6xl mb-4'>🔎</p>
 							<p className='text-xl text-gray-500 dark:text-gray-400'>
-								No tasks yet
+								{searchTerm ? "No matching tasks" : "No tasks yet"}
 							</p>
-							<p className='text-gray-400 mt-2'>Add your first task above</p>
+							<p className='text-gray-400 mt-2'>
+								Try adding one or changing the filter
+							</p>
 						</div>
 					) : (
-						sortedTasks.map((task) => (
+						filteredTasks.map((task) => (
 							<div
 								key={task.id}
 								className={`bg-white dark:bg-gray-800 rounded-2xl shadow p-5 flex items-center gap-4 transition-all ${task.completed ? "opacity-75" : ""}`}>
@@ -235,6 +263,15 @@ function App() {
 						))
 					)}
 				</div>
+
+				{/* Clear Completed (only when needed) */}
+				{completedCount > 0 && filter !== "active" && (
+					<button
+						onClick={clearCompleted}
+						className='mt-8 mx-auto block px-6 py-2 text-sm bg-red-100 hover:bg-red-200 dark:bg-red-900/40 dark:hover:bg-red-800 text-red-700 dark:text-red-300 rounded-xl transition'>
+						Clear all completed
+					</button>
+				)}
 			</div>
 		</div>
 	);
