@@ -3,7 +3,7 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "./context/AuthContext";
 import Login from "./components/Auth/Login";
-import { db } from "./services/firebase";
+import { auth, db } from "./services/firebase";
 import {
 	collection,
 	query,
@@ -45,7 +45,7 @@ function App() {
 	const inputRef = useRef(null);
 	const mobileMenuRef = useRef(null);
 
-	// Dark Mode
+	// Dark Mode (only UI preference, not tasks)
 	const [isDark, setIsDark] = useState(() => {
 		const saved = localStorage.getItem("taskflow-dark");
 		return saved ? JSON.parse(saved) : false;
@@ -163,7 +163,7 @@ function App() {
 		);
 	};
 
-	// Dark mode effect
+	// Dark mode effect (only UI preference)
 	useEffect(() => {
 		localStorage.setItem("taskflow-dark", JSON.stringify(isDark));
 		isDark
@@ -192,7 +192,7 @@ function App() {
 		}
 	}, [currentUser]);
 
-	// Fetch tasks from Firebase when user is authenticated
+	// Fetch tasks from Firebase when user is authenticated (REAL-TIME)
 	useEffect(() => {
 		if (!currentUser) {
 			setTasks([]);
@@ -202,14 +202,16 @@ function App() {
 
 		console.log("Fetching tasks for user:", currentUser.uid);
 		setTasksLoading(true);
-		
+
 		try {
+			// Query tasks for the current user only
 			const q = query(
 				collection(db, "tasks"),
 				where("userId", "==", currentUser.uid),
 				orderBy("createdAt", "desc"),
 			);
 
+			// Real-time listener for tasks
 			const unsubscribe = onSnapshot(
 				q,
 				(querySnapshot) => {
@@ -218,7 +220,7 @@ function App() {
 						...doc.data(),
 						createdAt: doc.data().createdAt?.toDate() || new Date(),
 					}));
-					console.log("Tasks loaded:", tasksData.length);
+					console.log("Tasks loaded from Firebase:", tasksData.length);
 					setTasks(tasksData);
 					setTasksLoading(false);
 				},
@@ -236,7 +238,7 @@ function App() {
 		}
 	}, [currentUser]);
 
-	// CRUD Operations
+	// CRUD Operations with Firebase
 	const handleAddTask = async (e) => {
 		e.preventDefault();
 		if (!taskTitle.trim() || !currentUser) return;
@@ -429,10 +431,14 @@ function App() {
 		const { destination, source } = result;
 		if (!destination || destination.index === source.index) return;
 
+		// Note: Drag and drop order is not persisted to Firebase in this version
+		// For a complete implementation, you would need to add an "order" field
+		// and update it for all affected tasks
 		const reorderedTasks = Array.from(filteredTasks);
 		const [movedTask] = reorderedTasks.splice(source.index, 1);
 		reorderedTasks.splice(destination.index, 0, movedTask);
 
+		// Update local state only (order won't persist across refreshes)
 		setTasks(reorderedTasks);
 	};
 
@@ -574,7 +580,9 @@ function App() {
 						</div>
 
 						{/* Mobile menu button */}
-						<div className='sm:hidden relative' ref={mobileMenuRef}>
+						<div
+							className='sm:hidden relative'
+							ref={mobileMenuRef}>
 							<motion.button
 								whileTap={{ scale: 0.95 }}
 								onClick={() => setShowMobileMenu(!showMobileMenu)}
@@ -763,7 +771,6 @@ function App() {
 
 				{/* Main Content */}
 				<div className='grid grid-cols-1 lg:grid-cols-12 gap-6'>
-					{/* Main Content Area */}
 					<div className='lg:col-span-12'>
 						{/* Add Task Form */}
 						<motion.div

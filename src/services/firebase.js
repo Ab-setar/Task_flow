@@ -1,27 +1,19 @@
-// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyAeMEAvSrA2Hdym_5DRGTqLwy-HpFIvLsg",
-  authDomain: "taskflow-app-f2e05.firebaseapp.com",
-  projectId: "taskflow-app-f2e05",
-  storageBucket: "taskflow-app-f2e05.firebasestorage.app",
-  messagingSenderId: "208790505198",
-  appId: "1:208790505198:web:c0f3ef3dbf5f5dbdce15ff"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const db = getFirestore(app);   // ← This is the new line
 
-// Initialize Firebase services
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
-
-// Export the services for use in your app
-export { auth, db, storage };
 export default app;
