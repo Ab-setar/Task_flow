@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Tasks collection
+    // A user can only read/write their own tasks
+    match /tasks/{taskId} {
+
+      // Read: only the owner of the task can read it
+      allow read: if request.auth != null
+        && request.auth.uid == resource.data.userId;
+
+      // Create: user must be logged in, and the userId field
+      // in the new document must match their own uid
+      // (prevents a user from creating tasks "as" someone else)
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.userId
+        && request.resource.data.keys().hasAll(['title', 'userId', 'completed', 'createdAt'])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 500;
+
+      // Update: only the owner can update, and they cannot
+      // change the userId field to someone else's uid
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.userId
+        && request.auth.uid == request.resource.data.userId;
+
+      // Delete: only the owner can delete
+      allow delete: if request.auth != null
+        && request.auth.uid == resource.data.userId;
+    }
+
+    // Deny everything else by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

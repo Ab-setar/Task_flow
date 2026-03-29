@@ -24,53 +24,23 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const signup = async (email, password) => {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      return userCredential.user;
-    } catch (error) {
-      throw error;
-    }
-  };
+  const signup = (email, password) =>
+    createUserWithEmailAndPassword(auth, email, password).then((c) => c.user);
 
-  const login = async (email, password) => {
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      return userCredential.user;
-    } catch (error) {
-      throw error;
-    }
-  };
+  const login = (email, password) =>
+    signInWithEmailAndPassword(auth, email, password).then((c) => c.user);
 
-  const logout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      throw error;
-    }
-  };
+  const logout = () => signOut(auth);
 
-  const resetPassword = async (email) => {
-    try {
-      await sendPasswordResetEmail(auth, email);
-    } catch (error) {
-      throw error;
-    }
-  };
+  const resetPassword = (email) => sendPasswordResetEmail(auth, email);
 
-  const signInWithGoogle = async () => {
-    try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      return result.user;
-    } catch (error) {
-      throw error;
-    }
+  const signInWithGoogle = () => {
+    const provider = new GoogleAuthProvider();
+    return signInWithPopup(auth, provider).then((r) => r.user);
   };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      console.log("Auth state changed:", user ? user.email : "No user");
       setCurrentUser(user);
       setLoading(false);
     });

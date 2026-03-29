@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { motion } from "framer-motion";
 
 export default function Login() {
-	const { signup, login, signInWithGoogle, resetPassword } = useAuth();
+	const { signup, login, signInWithGoogle, resetPassword, currentUser } = useAuth();
+	const navigate = useNavigate();
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [isLogin, setIsLogin] = useState(true);
@@ -12,6 +14,16 @@ export default function Login() {
 	const [loading, setLoading] = useState(false);
 	const [showResetPassword, setShowResetPassword] = useState(false);
 	const [resetEmail, setResetEmail] = useState("");
+
+	// When Firebase confirms the user is logged in, navigate to dashboard.
+	// This is the correct place to redirect — we wait for onAuthStateChanged
+	// to fire (via currentUser updating) rather than navigating immediately
+	// after the login() call, which can happen before auth state is ready.
+	useEffect(() => {
+		if (currentUser) {
+			navigate("/", { replace: true });
+		}
+	}, [currentUser, navigate]);
 
 	// Validation function
 	const validateForm = () => {
@@ -50,7 +62,8 @@ export default function Login() {
 			if (isLogin) {
 				await login(email, password);
 				setSuccess("Login successful! Redirecting...");
-				// The redirect will happen automatically via App.jsx
+				// Navigation happens via the useEffect above,
+				// which fires when currentUser updates in AuthContext
 			} else {
 				await signup(email, password);
 				setSuccess("Account created successfully! You can now login.");
@@ -105,6 +118,7 @@ export default function Login() {
 		try {
 			await signInWithGoogle();
 			setSuccess("Google login successful! Redirecting...");
+			// Navigation happens via the useEffect above
 		} catch (err) {
 			console.error("Google sign-in error:", err);
 			if (err.code === "auth/popup-closed-by-user") {
